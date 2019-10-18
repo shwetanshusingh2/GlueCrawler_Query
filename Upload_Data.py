@@ -6,13 +6,19 @@ import Cloudformation_Stack as stack
 
 
 class Upload_Template_Python_Scripts:
-
+    
+    
+    # uploads the lambda function and template file to s3
+    
     def upload_all_scripts(self):
         self.create_s3_bucket()
         self.upload_object(user_variable.SOURCE_BUCKET, user_variable.TEMPLATE_NAME, user_variable.TEMPLATE_NAME)
         self.upload_zip_object(user_variable.SOURCE_BUCKET, user_variable.LAMBDA_PYTHON_FILE,
                                user_variable.LAMBDA_ZIP_FILE, user_variable.LAMBDA_ZIP_FILE)
-
+        
+    
+    # it creates the new bucket for uploading lambda and python file
+    
     def create_s3_bucket(self):
         try:
             user_variable.s3_client.create_bucket(Bucket='data-shwet',
@@ -22,6 +28,9 @@ class Upload_Template_Python_Scripts:
 
     def upload_object(self, bucket_name, real_filename, s3_filename):
         user_variable.s3_client.Object(bucket_name, s3_filename).upload_file(Filename=real_filename)
+        
+        
+    # it uploads the python file into the form zip file to s3 bucket
 
     def upload_zip_object(self, bucket_name, input_filename, output_filename, location):
         zip = zipfile.ZipFile(output_filename, "w")
@@ -29,6 +38,9 @@ class Upload_Template_Python_Scripts:
         zip.close()
         self.upload_object(bucket_name, output_filename, location)
         os.remove(output_filename)
+        
+        
+    # it uploads the sample files into s3 bucket so that crawler can run on it
 
     def upload_sample_files(self):
         print("this is gonna work chill")
