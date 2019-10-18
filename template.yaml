@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Glue Week2"
+Parameters:
+  SourceBucket:
+    Type: String
+
+Resources:
+  roleglue:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:*
+                  - logs:PutLogEvents
+                  - logs:*
+                  - glue:Get*
+                  - glue:CreateTable
+                  - glue:UpdateTable
+                Resource: "*"
+  Database:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: "dbcrawler"
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: lambdarole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: 2012-10-17
+      Path: /
+      Policies:
+        - PolicyName: S3Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - glue:Get*
+                  - glue:StartCrawler
+                Resource: "*"
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub lambdafunction
+      Code:
+        S3Bucket: 'data-shwet'
+        S3Key: 'lambda_trigger.zip'
+      Handler: lambda_trigger.handler
+      Runtime: python3.7
+      Role: !GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          source: !Ref SourceBucket
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref SourceBucket
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt LambdaFunction.Arn
+  BucketPermission:
+          Type: AWS::Lambda::Permission
+          Properties:
+            Action: 'lambda:InvokeFunction'
+            FunctionName: !Ref LambdaFunction
+            Principal: s3.amazonaws.com
+            SourceArn: !Sub arn:aws:s3:::${SourceBucket}
+  Crawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: "CSVCrawler"
+      Role: !GetAtt roleglue.Arn
+      DatabaseName: !Ref Database
+      Targets:
+        S3Targets:
+          - Path: "s3://shwet23/csv"
+      SchemaChangePolicy:
+        UpdateBehavior: "UPDATE_IN_DATABASE"
