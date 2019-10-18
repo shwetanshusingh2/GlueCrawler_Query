@@ -7,6 +7,8 @@ import time
 import User_Defined_Variables as user_variable
 
 class Athena:
+    
+    # this function runs the query in athena in same account
     def run_query(self,query, database, s3_output):
         response2 = user_variable.ATHENA_CLIENT.start_query_execution(
             QueryString=query,
@@ -30,7 +32,7 @@ class Athena:
         print('Query "{}" finished.'.format(query))
         return self.read_file(s3_key)
 
-
+    # this function converts the csv stored in s3 bucket to pandads dataframe and prints it
     def read_file(self,s3_key):
         try:
             print('output/' + s3_key + '.csv')
